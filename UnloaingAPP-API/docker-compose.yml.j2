@@ -1,0 +1,30 @@
+version: "3.3"
+
+services:
+  db:
+    image: postgres:alpine3.15
+    volumes:
+      - /var/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_NAME={{ database_user }}  # postgres container creates database name with username
+      - POSTGRES_USER={{ database_user }}
+      - POSTGRES_PASSWORD={{ database_password }}
+
+  site:
+    image: jenneron/unloading-app:latest
+    command: sh -c "
+        cd /usr/src/app
+        python manage.py makemigrations &&
+        python manage.py migrate &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    ports:
+      - "80:8000"
+    environment:
+      - POSTGRES_USER={{ database_user }}
+      - POSTGRES_PASSWORD={{ database_password }}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - DJANGO_DEBUG={{ django_debug }}
+    depends_on:
+      - db

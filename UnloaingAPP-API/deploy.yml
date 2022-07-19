@@ -1,0 +1,53 @@
+- hosts: unloading-app
+  become: yes
+  tasks:
+  - name: Gather package facts
+    package_facts:
+      manager: auto
+
+  - name: apt update
+    apt:
+      update_cache: yes
+      cache_valid_time: 3600
+    when: '"docker" not in ansible_facts.packages'
+
+  - name: Install docker
+    apt:
+      name: ['docker', 'docker.io', 'docker-compose']
+      state: latest
+    when: '"docker" not in ansible_facts.packages'
+
+  - name: Add user {{ ansible_user }} to group docker
+    user: 
+      name={{ ansible_user }}
+      groups=docker
+      append=yes
+    when: '"docker" not in ansible_facts.packages'
+
+  - name: Create project directory
+    ansible.builtin.file:
+      path: /home/{{ ansible_user }}/unloading-app
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      state: directory
+      mode: '0755'
+
+  - name: Copy docker-compose.yml to remote
+    template:
+      src: docker-compose.yml.j2
+      dest: /home/{{ ansible_user }}/unloading-app/docker-compose.yml
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      mode: '0644'
+
+  - name: Pull an image
+    community.docker.docker_image:
+      name: jenneron/unloading-app:latest
+      source: pull
+      force_source: yes  # pull updated image with same tag
+
+  - name: Restart services
+    community.docker.docker_compose:
+      project_src: unloading-app
+      build: no
+      restarted: yes

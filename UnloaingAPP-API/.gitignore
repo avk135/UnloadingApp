@@ -1,0 +1,9 @@
+env/
+.idea/
+__pycache__/
+*.sqlite3
+dump.json
+src/djangoProject/local_settings.py
+ansible-hosts.ini
+hosts.ini
+hosts
